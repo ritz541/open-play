@@ -2,15 +2,23 @@ import { Context, Effect, Layer } from "effect"
 
 import { Instance } from "../project/instance"
 
-import PROMPT_ROLEPLAY from "./prompt/default.txt"
+import PROMPT_ANTHROPIC from "./prompt/anthropic.txt"
+import PROMPT_DEFAULT from "./prompt/default.txt"
+import PROMPT_BEAST from "./prompt/beast.txt"
+import PROMPT_GEMINI from "./prompt/gemini.txt"
+import PROMPT_GPT from "./prompt/gpt.txt"
+import PROMPT_KIMI from "./prompt/kimi.txt"
+
+import PROMPT_CODEX from "./prompt/codex.txt"
+import PROMPT_TRINITY from "./prompt/trinity.txt"
 import type { Provider } from "@/provider"
 import type { Agent } from "@/agent/agent"
 import { Permission } from "@/permission"
 import { Skill } from "@/skill"
 
-// open-play: Always use the roleplay system prompt regardless of model
 export function provider(model: Provider.Model) {
-  return [PROMPT_ROLEPLAY]
+  // open-play: always use roleplay prompt
+  return [PROMPT_DEFAULT]
 }
 
 export interface Interface {
@@ -27,15 +35,18 @@ export const layer = Layer.effect(
 
     return Service.of({
       environment(model) {
+        const project = Instance.project
         return [
           [
-            `You are powered by ${model.api.id} (${model.providerID}/${model.api.id}).`,
-            `Today is ${new Date().toDateString()}.`,
-            `Character and lore data is stored in ~/.open-play/`,
-            ``,
-            `Use the character tool to manage characters.`,
-            `Use the lore tool to manage world-building entries.`,
-            `Use the scene tool to manage active storytelling.`,
+            `You are powered by the model named ${model.api.id}. The exact model ID is ${model.providerID}/${model.api.id}`,
+            `Here is some useful information about the environment you are running in:`,
+            `<env>`,
+            `  Working directory: ${Instance.directory}`,
+            `  Workspace root folder: ${Instance.worktree}`,
+            `  Is directory a git repo: ${project.vcs === "git" ? "yes" : "no"}`,
+            `  Platform: ${process.platform}`,
+            `  Today's date: ${new Date().toDateString()}`,
+            `</env>`,
           ].join("\n"),
         ]
       },
@@ -48,6 +59,8 @@ export const layer = Layer.effect(
         return [
           "Skills provide specialized instructions and workflows for specific tasks.",
           "Use the skill tool to load a skill when a task matches its description.",
+          // the agents seem to ingest the information about skills a bit better if we present a more verbose
+          // version of them here and a less verbose version in tool description, rather than vice versa.
           Skill.fmt(list, { verbose: true }),
         ].join("\n")
       }),
