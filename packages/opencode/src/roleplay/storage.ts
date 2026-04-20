@@ -35,8 +35,8 @@ export interface Scene {
   id: string
   title: string
   setting: string
-  participants: string[] // character IDs
-  current_narrator: string // character ID or "narrator"
+  participants: string[]
+  current_narrator: string
   history: SceneMessage[]
   created_at: string
   updated_at: string
@@ -49,179 +49,171 @@ export interface SceneMessage {
   timestamp: string
 }
 
-export interface WorldState {
-  id: string
-  name: string
-  description: string
-  active_scene_id?: string
-  active_character_ids: string[]
-  created_at: string
-  updated_at: string
-}
-
 // Ensure data directory exists
-const ensureDir = Effect.gen(function* () {
+async function ensureDir(): Promise<void> {
   const dirs = [
     DATA_DIR,
     path.join(DATA_DIR, "characters"),
     path.join(DATA_DIR, "lore"),
     path.join(DATA_DIR, "scenes"),
-    path.join(DATA_DIR, "worlds"),
   ]
   for (const dir of dirs) {
-    yield* Effect.promise(() => fs.mkdir(dir, { recursive: true }))
+    await fs.mkdir(dir, { recursive: true })
   }
-})
-
-// Generic CRUD for JSON files
-function readJson<T>(filePath: string): Effect.Effect<T, Error> {
-  return Effect.tryPromise({
-    try: async () => {
-      const data = await fs.readFile(filePath, "utf-8")
-      return JSON.parse(data) as T
-    },
-    catch: (e) => new Error(`Failed to read ${filePath}: ${e}`),
-  })
 }
 
-function writeJson<T>(filePath: string, data: T): Effect.Effect<void, Error> {
-  return Effect.tryPromise({
-    try: async () => {
-      await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8")
-    },
-    catch: (e) => new Error(`Failed to write ${filePath}: ${e}`),
-  })
+async function readJsonFile<T>(filePath: string): Promise<T> {
+  const data = await fs.readFile(filePath, "utf-8")
+  return JSON.parse(data) as T
 }
 
-function listDir(dirPath: string): Effect.Effect<string[], Error> {
-  return Effect.tryPromise({
-    try: () => fs.readdir(dirPath),
-    catch: (e) => new Error(`Failed to read directory ${dirPath}: ${e}`),
-  })
+async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8")
 }
 
-function deleteFile(filePath: string): Effect.Effect<void, Error> {
-  return Effect.tryPromise({
-    try: () => fs.unlink(filePath),
-    catch: (e) => new Error(`Failed to delete ${filePath}: ${e}`),
-  })
+async function listJsonFiles(dirPath: string): Promise<string[]> {
+  const files = await fs.readdir(dirPath)
+  return files.filter((f: string) => f.endsWith(".json"))
 }
 
 // Character operations
 export const CharacterStore = {
   dir: path.join(DATA_DIR, "characters"),
 
-  list: Effect.gen(function* () {
-    yield* ensureDir
-    const files = yield* listDir(CharacterStore.dir)
-    const jsonFiles = files.filter((f) => f.endsWith(".json"))
-    const characters: Character[] = []
-    for (const file of jsonFiles) {
-      const char = yield* readJson<Character>(path.join(CharacterStore.dir, file))
-      characters.push(char)
-    }
-    return characters.sort((a, b) => a.name.localeCompare(b.name))
+  list: Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
+      const files = await listJsonFiles(CharacterStore.dir)
+      const characters: Character[] = []
+      for (const file of files) {
+        const char = await readJsonFile<Character>(path.join(CharacterStore.dir, file))
+        characters.push(char)
+      }
+      return characters.sort((a: Character, b: Character) => a.name.localeCompare(b.name))
+    },
+    catch: (e) => new Error(`Failed to list characters: ${e}`),
   }),
 
-  get: (id: string) =>
-    Effect.gen(function* () {
-      yield* ensureDir
-      return yield* readJson<Character>(path.join(CharacterStore.dir, `${id}.json`))
-    }),
+  get: (id: string) => Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
+      return await readJsonFile<Character>(path.join(CharacterStore.dir, `${id}.json`))
+    },
+    catch: (e) => new Error(`Failed to get character ${id}: ${e}`),
+  }),
 
-  save: (char: Character) =>
-    Effect.gen(function* () {
-      yield* ensureDir
+  save: (char: Character) => Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
       char.updated_at = new Date().toISOString()
-      yield* writeJson(path.join(CharacterStore.dir, `${char.id}.json`), char)
-    }),
+      await writeJsonFile(path.join(CharacterStore.dir, `${char.id}.json`), char)
+    },
+    catch: (e) => new Error(`Failed to save character: ${e}`),
+  }),
 
-  delete: (id: string) =>
-    Effect.gen(function* () {
-      yield* deleteFile(path.join(CharacterStore.dir, `${id}.json`))
-    }),
+  delete: (id: string) => Effect.tryPromise({
+    try: async () => {
+      await fs.unlink(path.join(CharacterStore.dir, `${id}.json`))
+    },
+    catch: (e) => new Error(`Failed to delete character ${id}: ${e}`),
+  }),
 }
 
 // Lore operations
 export const LoreStore = {
   dir: path.join(DATA_DIR, "lore"),
 
-  list: Effect.gen(function* () {
-    yield* ensureDir
-    const files = yield* listDir(LoreStore.dir)
-    const jsonFiles = files.filter((f) => f.endsWith(".json"))
-    const entries: LoreEntry[] = []
-    for (const file of jsonFiles) {
-      const entry = yield* readJson<LoreEntry>(path.join(LoreStore.dir, file))
-      entries.push(entry)
-    }
-    return entries.sort((a, b) => a.title.localeCompare(b.title))
+  list: Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
+      const files = await listJsonFiles(LoreStore.dir)
+      const entries: LoreEntry[] = []
+      for (const file of files) {
+        const entry = await readJsonFile<LoreEntry>(path.join(LoreStore.dir, file))
+        entries.push(entry)
+      }
+      return entries.sort((a: LoreEntry, b: LoreEntry) => a.title.localeCompare(b.title))
+    },
+    catch: (e) => new Error(`Failed to list lore: ${e}`),
   }),
 
-  get: (id: string) =>
-    Effect.gen(function* () {
-      yield* ensureDir
-      return yield* readJson<LoreEntry>(path.join(LoreStore.dir, `${id}.json`))
-    }),
+  get: (id: string) => Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
+      return await readJsonFile<LoreEntry>(path.join(LoreStore.dir, `${id}.json`))
+    },
+    catch: (e) => new Error(`Failed to get lore ${id}: ${e}`),
+  }),
 
-  save: (entry: LoreEntry) =>
-    Effect.gen(function* () {
-      yield* ensureDir
+  save: (entry: LoreEntry) => Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
       entry.updated_at = new Date().toISOString()
-      yield* writeJson(path.join(LoreStore.dir, `${entry.id}.json`), entry)
-    }),
+      await writeJsonFile(path.join(LoreStore.dir, `${entry.id}.json`), entry)
+    },
+    catch: (e) => new Error(`Failed to save lore: ${e}`),
+  }),
 
-  delete: (id: string) =>
-    Effect.gen(function* () {
-      yield* deleteFile(path.join(LoreStore.dir, `${id}.json`))
-    }),
+  delete: (id: string) => Effect.tryPromise({
+    try: async () => {
+      await fs.unlink(path.join(LoreStore.dir, `${id}.json`))
+    },
+    catch: (e) => new Error(`Failed to delete lore ${id}: ${e}`),
+  }),
 
-  search: (query: string) =>
-    Effect.gen(function* () {
-      const entries = yield* LoreStore.list
-      const q = query.toLowerCase()
-      return entries.filter(
-        (e) =>
-          e.title.toLowerCase().includes(q) ||
-          e.content.toLowerCase().includes(q) ||
-          e.tags.some((t) => t.toLowerCase().includes(q))
-      )
-    }),
+  search: (query: string) => Effect.gen(function* () {
+    const entries = yield* LoreStore.list
+    const q = query.toLowerCase()
+    return entries.filter(
+      (e: LoreEntry) =>
+        e.title.toLowerCase().includes(q) ||
+        e.content.toLowerCase().includes(q) ||
+        e.tags.some((t: string) => t.toLowerCase().includes(q))
+    )
+  }),
 }
 
 // Scene operations
 export const SceneStore = {
   dir: path.join(DATA_DIR, "scenes"),
 
-  list: Effect.gen(function* () {
-    yield* ensureDir
-    const files = yield* listDir(SceneStore.dir)
-    const jsonFiles = files.filter((f) => f.endsWith(".json"))
-    const scenes: Scene[] = []
-    for (const file of jsonFiles) {
-      const scene = yield* readJson<Scene>(path.join(SceneStore.dir, file))
-      scenes.push(scene)
-    }
-    return scenes.sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+  list: Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
+      const files = await listJsonFiles(SceneStore.dir)
+      const scenes: Scene[] = []
+      for (const file of files) {
+        const scene = await readJsonFile<Scene>(path.join(SceneStore.dir, file))
+        scenes.push(scene)
+      }
+      return scenes.sort((a: Scene, b: Scene) => b.updated_at.localeCompare(a.updated_at))
+    },
+    catch: (e) => new Error(`Failed to list scenes: ${e}`),
   }),
 
-  get: (id: string) =>
-    Effect.gen(function* () {
-      yield* ensureDir
-      return yield* readJson<Scene>(path.join(SceneStore.dir, `${id}.json`))
-    }),
+  get: (id: string) => Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
+      return await readJsonFile<Scene>(path.join(SceneStore.dir, `${id}.json`))
+    },
+    catch: (e) => new Error(`Failed to get scene ${id}: ${e}`),
+  }),
 
-  save: (scene: Scene) =>
-    Effect.gen(function* () {
-      yield* ensureDir
+  save: (scene: Scene) => Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
       scene.updated_at = new Date().toISOString()
-      yield* writeJson(path.join(SceneStore.dir, `${scene.id}.json`), scene)
-    }),
+      await writeJsonFile(path.join(SceneStore.dir, `${scene.id}.json`), scene)
+    },
+    catch: (e) => new Error(`Failed to save scene: ${e}`),
+  }),
 
-  delete: (id: string) =>
-    Effect.gen(function* () {
-      yield* deleteFile(path.join(SceneStore.dir, `${id}.json`))
-    }),
+  delete: (id: string) => Effect.tryPromise({
+    try: async () => {
+      await fs.unlink(path.join(SceneStore.dir, `${id}.json`))
+    },
+    catch: (e) => new Error(`Failed to delete scene ${id}: ${e}`),
+  }),
 
   addMessage: (sceneId: string, message: SceneMessage) =>
     Effect.gen(function* () {

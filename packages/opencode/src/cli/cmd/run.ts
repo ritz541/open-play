@@ -68,41 +68,43 @@ function fallback(part: ToolPart) {
   })
 }
 
-function character(info: ToolProps<typeof CharacterTool>) {
+function character(info: any) {
   const action = info.input.action
   const icon = action === "create" ? "+" : action === "delete" ? "x" : action === "list" ? "#" : ">"
   inline({
     icon,
-    title: `Character ${action}`,
-    description: "name" in info.input ? info.input.name : undefined,
+    title: "Character " + action,
+    description: info.input.name,
   })
 }
 
-function lore(info: ToolProps<typeof LoreTool>) {
+function lore(info: any) {
   const action = info.input.action
   const icon = action === "create" ? "+" : action === "delete" ? "x" : action === "search" ? "?" : ">"
   inline({
     icon,
-    title: `Lore ${action}`,
-    description: "title" in info.input ? info.input.title : "query" in info.input ? info.input.query : undefined,
+    title: "Lore " + action,
+    description: info.input.title || info.input.query,
   })
 }
 
-function scene(info: ToolProps<typeof SceneTool>) {
+function scene(info: any) {
   const action = info.input.action
   const icon = action === "create" ? "+" : action === "delete" ? "x" : action === "speak" ? '"' : "*"
+  const desc = info.input.content ? String(info.input.content).slice(0, 50) : info.input.title
   inline({
     icon,
-    title: `Scene ${action}`,
-    description: "title" in info.input ? info.input.title : "content" in info.input ? info.input.content?.slice(0, 50) : undefined,
+    title: "Scene " + action,
+    description: desc,
   })
 }
 
-function tts(info: ToolProps<typeof TtsTool>) {
+function tts(info: any) {
+  const desc = info.input.text ? String(info.input.text).slice(0, 50) : undefined
   inline({
     icon: "~",
-    title: `TTS speak`,
-    description: "text" in info.input ? info.input.text?.slice(0, 50) : undefined,
+    title: "TTS speak",
+    description: desc,
   })
 }
 

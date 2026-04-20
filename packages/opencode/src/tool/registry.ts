@@ -15,6 +15,9 @@ import { ProviderID, type ModelID } from "../provider/schema"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util"
 import * as Truncate from "./truncate"
+import { Glob } from "@opencode-ai/shared/util/glob"
+import path from "path"
+import { pathToFileURL } from "url"
 import { Effect, Layer, Context } from "effect"
 import { FetchHttpClient, HttpClient } from "effect/unstable/http"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -30,43 +33,32 @@ import { CharacterTool } from "./character"
 import { LoreTool } from "./lore"
 import { SceneTool } from "./scene"
 import { TtsTool } from "./tts"
+import { createReadTool } from "./internal-reader"
 
 const log = Log.create({ service: "tool.registry" })
 
 type TaskDef = Tool.InferDef<typeof TaskTool>
 type CharacterDef = Tool.InferDef<typeof CharacterTool>
+import type { Def } from "./tool"
 
 type State = {
   custom: Tool.Def[]
   builtin: Tool.Def[]
   task: TaskDef
   character: CharacterDef
+  read: Def
 }
 
 export interface Interface {
   readonly ids: () => Effect.Effect<string[]>
   readonly all: () => Effect.Effect<Tool.Def[]>
-  readonly named: () => Effect.Effect<{ task: TaskDef; character: CharacterDef }>
+  readonly named: () => Effect.Effect<{ task: TaskDef; character: CharacterDef; read: Def }>
   readonly tools: (model: { providerID: ProviderID; modelID: ModelID; agent: Agent.Info }) => Effect.Effect<Tool.Def[]>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ToolRegistry") {}
 
-export const layer: Layer.Layer<
-  Service,
-  never,
-  | Config.Service
-  | Plugin.Service
-  | Question.Service
-  | Agent.Service
-  | Skill.Service
-  | Session.Service
-  | Provider.Service
-  | HttpClient.HttpClient
-  | ChildProcessSpawner
-  | Format.Service
-  | Truncate.Service
-> = Layer.effect(
+export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const config = yield* Config.Service
@@ -177,6 +169,7 @@ export const layer: Layer.Layer<
           ],
           task: tool.task,
           character: tool.character,
+          read: createReadTool(),
         }
       }),
     )
@@ -256,7 +249,7 @@ export const layer: Layer.Layer<
 
     const named: Interface["named"] = Effect.fn("ToolRegistry.named")(function* () {
       const s = yield* InstanceState.get(state)
-      return { task: s.task, character: s.character }
+      return { task: s.task, character: s.character, read: s.read }
     })
 
     return Service.of({ ids, all, named, tools })
