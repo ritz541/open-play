@@ -13,18 +13,12 @@ import { Provider } from "../../provider"
 import { Agent } from "../../agent/agent"
 import { Permission } from "../../permission"
 import { Tool } from "../../tool"
-import { GlobTool } from "../../tool/glob"
-import { GrepTool } from "../../tool/grep"
-import { ReadTool } from "../../tool/read"
-import { WebFetchTool } from "../../tool/webfetch"
-import { EditTool } from "../../tool/edit"
-import { WriteTool } from "../../tool/write"
-import { CodeSearchTool } from "../../tool/codesearch"
-import { WebSearchTool } from "../../tool/websearch"
 import { TaskTool } from "../../tool/task"
 import { SkillTool } from "../../tool/skill"
-import { BashTool } from "../../tool/bash"
-import { TodoWriteTool } from "../../tool/todo"
+import { CharacterTool } from "../../tool/character"
+import { LoreTool } from "../../tool/lore"
+import { SceneTool } from "../../tool/scene"
+import { TtsTool } from "../../tool/tts"
 import { Locale } from "../../util"
 import { AppRuntime } from "@/effect/app-runtime"
 
@@ -74,88 +68,41 @@ function fallback(part: ToolPart) {
   })
 }
 
-function glob(info: ToolProps<typeof GlobTool>) {
-  const root = info.input.path ?? ""
-  const title = `Glob "${info.input.pattern}"`
-  const suffix = root ? `in ${normalizePath(root)}` : ""
-  const num = info.metadata.count
-  const description =
-    num === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${num} ${num === 1 ? "match" : "matches"}`
+function character(info: ToolProps<typeof CharacterTool>) {
+  const action = info.input.action
+  const icon = action === "create" ? "+" : action === "delete" ? "x" : action === "list" ? "#" : ">"
   inline({
-    icon: "✱",
-    title,
-    ...(description && { description }),
+    icon,
+    title: `Character ${action}`,
+    description: "name" in info.input ? info.input.name : undefined,
   })
 }
 
-function grep(info: ToolProps<typeof GrepTool>) {
-  const root = info.input.path ?? ""
-  const title = `Grep "${info.input.pattern}"`
-  const suffix = root ? `in ${normalizePath(root)}` : ""
-  const num = info.metadata.matches
-  const description =
-    num === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${num} ${num === 1 ? "match" : "matches"}`
+function lore(info: ToolProps<typeof LoreTool>) {
+  const action = info.input.action
+  const icon = action === "create" ? "+" : action === "delete" ? "x" : action === "search" ? "?" : ">"
   inline({
-    icon: "✱",
-    title,
-    ...(description && { description }),
+    icon,
+    title: `Lore ${action}`,
+    description: "title" in info.input ? info.input.title : "query" in info.input ? info.input.query : undefined,
   })
 }
 
-function read(info: ToolProps<typeof ReadTool>) {
-  const file = normalizePath(info.input.filePath)
-  const pairs = Object.entries(info.input).filter(([key, value]) => {
-    if (key === "filePath") return false
-    return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
-  })
-  const description = pairs.length ? `[${pairs.map(([key, value]) => `${key}=${value}`).join(", ")}]` : undefined
+function scene(info: ToolProps<typeof SceneTool>) {
+  const action = info.input.action
+  const icon = action === "create" ? "+" : action === "delete" ? "x" : action === "speak" ? '"' : "*"
   inline({
-    icon: "→",
-    title: `Read ${file}`,
-    ...(description && { description }),
+    icon,
+    title: `Scene ${action}`,
+    description: "title" in info.input ? info.input.title : "content" in info.input ? info.input.content?.slice(0, 50) : undefined,
   })
 }
 
-function write(info: ToolProps<typeof WriteTool>) {
-  block(
-    {
-      icon: "←",
-      title: `Write ${normalizePath(info.input.filePath)}`,
-    },
-    info.part.state.status === "completed" ? info.part.state.output : undefined,
-  )
-}
-
-function webfetch(info: ToolProps<typeof WebFetchTool>) {
+function tts(info: ToolProps<typeof TtsTool>) {
   inline({
-    icon: "%",
-    title: `WebFetch ${info.input.url}`,
-  })
-}
-
-function edit(info: ToolProps<typeof EditTool>) {
-  const title = normalizePath(info.input.filePath)
-  const diff = info.metadata.diff
-  block(
-    {
-      icon: "←",
-      title: `Edit ${title}`,
-    },
-    diff,
-  )
-}
-
-function codesearch(info: ToolProps<typeof CodeSearchTool>) {
-  inline({
-    icon: "◇",
-    title: `Exa Code Search "${info.input.query}"`,
-  })
-}
-
-function websearch(info: ToolProps<typeof WebSearchTool>) {
-  inline({
-    icon: "◈",
-    title: `Exa Web Search "${info.input.query}"`,
+    icon: "~",
+    title: `TTS speak`,
+    description: "text" in info.input ? info.input.text?.slice(0, 50) : undefined,
   })
 }
 
@@ -167,7 +114,7 @@ function task(info: ToolProps<typeof TaskTool>) {
   const agent = Locale.titlecase(subagent)
   const desc =
     typeof input.description === "string" && input.description.trim().length > 0 ? input.description : undefined
-  const icon = status === "error" ? "✗" : status === "running" ? "•" : "✓"
+  const icon = status === "error" ? "x" : status === "running" ? "." : "v"
   const name = desc ?? `${agent} Task`
   inline({
     icon,
@@ -178,30 +125,9 @@ function task(info: ToolProps<typeof TaskTool>) {
 
 function skill(info: ToolProps<typeof SkillTool>) {
   inline({
-    icon: "→",
+    icon: ">",
     title: `Skill "${info.input.name}"`,
   })
-}
-
-function bash(info: ToolProps<typeof BashTool>) {
-  const output = info.part.state.status === "completed" ? info.part.state.output?.trim() : undefined
-  block(
-    {
-      icon: "$",
-      title: `${info.input.command}`,
-    },
-    output,
-  )
-}
-
-function todo(info: ToolProps<typeof TodoWriteTool>) {
-  block(
-    {
-      icon: "#",
-      title: "Todos",
-    },
-    info.input.todos.map((item) => `${item.status === "completed" ? "[x]" : "[ ]"} ${item.content}`).join("\n"),
-  )
 }
 
 function normalizePath(input?: string) {
@@ -408,17 +334,11 @@ export const RunCommand = cmd({
     async function execute(sdk: OpencodeClient) {
       function tool(part: ToolPart) {
         try {
-          if (part.tool === "bash") return bash(props<typeof BashTool>(part))
-          if (part.tool === "glob") return glob(props<typeof GlobTool>(part))
-          if (part.tool === "grep") return grep(props<typeof GrepTool>(part))
-          if (part.tool === "read") return read(props<typeof ReadTool>(part))
-          if (part.tool === "write") return write(props<typeof WriteTool>(part))
-          if (part.tool === "webfetch") return webfetch(props<typeof WebFetchTool>(part))
-          if (part.tool === "edit") return edit(props<typeof EditTool>(part))
-          if (part.tool === "codesearch") return codesearch(props<typeof CodeSearchTool>(part))
-          if (part.tool === "websearch") return websearch(props<typeof WebSearchTool>(part))
+          if (part.tool === "character") return character(props<typeof CharacterTool>(part))
+          if (part.tool === "lore") return lore(props<typeof LoreTool>(part))
+          if (part.tool === "scene") return scene(props<typeof SceneTool>(part))
+          if (part.tool === "tts") return tts(props<typeof TtsTool>(part))
           if (part.tool === "task") return task(props<typeof TaskTool>(part))
-          if (part.tool === "todowrite") return todo(props<typeof TodoWriteTool>(part))
           if (part.tool === "skill") return skill(props<typeof SkillTool>(part))
           return fallback(part)
         } catch {
