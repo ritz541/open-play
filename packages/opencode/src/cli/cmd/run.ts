@@ -18,7 +18,6 @@ import { SkillTool } from "../../tool/skill"
 import { CharacterTool } from "../../tool/character"
 import { LoreTool } from "../../tool/lore"
 import { SceneTool } from "../../tool/scene"
-import { TtsTool } from "../../tool/tts"
 import { Locale } from "../../util"
 import { AppRuntime } from "@/effect/app-runtime"
 
@@ -99,15 +98,6 @@ function scene(info: any) {
   })
 }
 
-function tts(info: any) {
-  const desc = info.input.text ? String(info.input.text).slice(0, 50) : undefined
-  inline({
-    icon: "~",
-    title: "TTS speak",
-    description: desc,
-  })
-}
-
 function task(info: ToolProps<typeof TaskTool>) {
   const input = info.part.state.input
   const status = info.part.state.status
@@ -140,7 +130,7 @@ function normalizePath(input?: string) {
 
 export const RunCommand = cmd({
   command: "run [message..]",
-  describe: "run opencode with a message",
+  describe: "run open-play with a message",
   builder: (yargs: Argv) => {
     return yargs
       .positional("message", {
@@ -339,7 +329,6 @@ export const RunCommand = cmd({
           if (part.tool === "character") return character(props<typeof CharacterTool>(part))
           if (part.tool === "lore") return lore(props<typeof LoreTool>(part))
           if (part.tool === "scene") return scene(props<typeof SceneTool>(part))
-          if (part.tool === "tts") return tts(props<typeof TtsTool>(part))
           if (part.tool === "task") return task(props<typeof TaskTool>(part))
           if (part.tool === "skill") return skill(props<typeof SkillTool>(part))
           return fallback(part)

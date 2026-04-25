@@ -8,6 +8,12 @@ import fs from "fs/promises"
 
 const DATA_DIR = path.join(os.homedir(), ".open-play")
 
+export interface ActiveState {
+  active_scene_id: string | null
+  player_character_id: string | null
+  world_name: string
+}
+
 export interface Character {
   id: string
   name: string
@@ -227,4 +233,59 @@ export const SceneStore = {
 // Utility: generate a simple unique ID
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+}
+
+// Active session state — what's happening right now
+const ACTIVE_FILE = path.join(DATA_DIR, "active.json")
+
+function defaultActiveState(): ActiveState {
+  return { active_scene_id: null, player_character_id: null, world_name: "Untitled World" }
+}
+
+async function readActiveState(): Promise<ActiveState> {
+  try {
+    return await readJsonFile<ActiveState>(ACTIVE_FILE)
+  } catch {
+    return defaultActiveState()
+  }
+}
+
+export const ActiveStateStore = {
+  get: Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
+      return await readActiveState()
+    },
+    catch: (e) => new Error(`Failed to read active state: ${e}`),
+  }),
+
+  set: (state: ActiveState) =>
+    Effect.tryPromise({
+      try: async () => {
+        await ensureDir()
+        await writeJsonFile(ACTIVE_FILE, state)
+      },
+      catch: (e) => new Error(`Failed to save active state: ${e}`),
+    }),
+
+  setActiveScene: (sceneId: string | null) =>
+    Effect.gen(function* () {
+      const state = yield* ActiveStateStore.get
+      state.active_scene_id = sceneId
+      yield* ActiveStateStore.set(state)
+    }),
+
+  setPlayerCharacter: (characterId: string | null) =>
+    Effect.gen(function* () {
+      const state = yield* ActiveStateStore.get
+      state.player_character_id = characterId
+      yield* ActiveStateStore.set(state)
+    }),
+
+  setWorldName: (name: string) =>
+    Effect.gen(function* () {
+      const state = yield* ActiveStateStore.get
+      state.world_name = name
+      yield* ActiveStateStore.set(state)
+    }),
 }
