@@ -18,6 +18,8 @@ import { SkillTool } from "../../tool/skill"
 import { CharacterTool } from "../../tool/character"
 import { LoreTool } from "../../tool/lore"
 import { SceneTool } from "../../tool/scene"
+import { NoteTool } from "../../tool/note"
+import { RollTool } from "../../tool/roll"
 import { Locale } from "../../util"
 import { AppRuntime } from "@/effect/app-runtime"
 
@@ -95,6 +97,23 @@ function scene(info: any) {
     icon,
     title: "Scene " + action,
     description: desc,
+  })
+}
+
+function note(info: any) {
+  const action = info.input.action
+  const icon = action === "create" ? "+" : action === "delete" ? "x" : "."
+  inline({
+    icon,
+    title: "Note " + action,
+    description: info.input.title || info.input.query,
+  })
+}
+
+function roll(info: any) {
+  inline({
+    icon: "#",
+    title: "Roll " + info.input.dice,
   })
 }
 
@@ -329,6 +348,8 @@ export const RunCommand = cmd({
           if (part.tool === "character") return character(props<typeof CharacterTool>(part))
           if (part.tool === "lore") return lore(props<typeof LoreTool>(part))
           if (part.tool === "scene") return scene(props<typeof SceneTool>(part))
+          if (part.tool === "note") return note(props<typeof NoteTool>(part))
+          if (part.tool === "roll") return roll(props<typeof RollTool>(part))
           if (part.tool === "task") return task(props<typeof TaskTool>(part))
           if (part.tool === "skill") return skill(props<typeof SkillTool>(part))
           return fallback(part)

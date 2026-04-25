@@ -55,6 +55,15 @@ export interface SceneMessage {
   timestamp: string
 }
 
+export interface NoteEntry {
+  id: string
+  title: string
+  content: string
+  tags: string[]
+  created_at: string
+  updated_at: string
+}
+
 // Ensure data directory exists
 async function ensureDir(): Promise<void> {
   const dirs = [
@@ -62,6 +71,7 @@ async function ensureDir(): Promise<void> {
     path.join(DATA_DIR, "characters"),
     path.join(DATA_DIR, "lore"),
     path.join(DATA_DIR, "scenes"),
+    path.join(DATA_DIR, "notes"),
   ]
   for (const dir of dirs) {
     await fs.mkdir(dir, { recursive: true })
@@ -288,4 +298,58 @@ export const ActiveStateStore = {
       state.world_name = name
       yield* ActiveStateStore.set(state)
     }),
+}
+
+// Note operations — AI's internal notebook for tracking story threads, plans, subplots
+export const NoteStore = {
+  dir: path.join(DATA_DIR, "notes"),
+
+  list: Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
+      const files = await listJsonFiles(NoteStore.dir)
+      const notes: NoteEntry[] = []
+      for (const file of files) {
+        const note = await readJsonFile<NoteEntry>(path.join(NoteStore.dir, file))
+        notes.push(note)
+      }
+      return notes.sort((a: NoteEntry, b: NoteEntry) => b.updated_at.localeCompare(a.updated_at))
+    },
+    catch: (e) => new Error(`Failed to list notes: ${e}`),
+  }),
+
+  get: (id: string) => Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
+      return await readJsonFile<NoteEntry>(path.join(NoteStore.dir, `${id}.json`))
+    },
+    catch: (e) => new Error(`Failed to get note ${id}: ${e}`),
+  }),
+
+  save: (note: NoteEntry) => Effect.tryPromise({
+    try: async () => {
+      await ensureDir()
+      note.updated_at = new Date().toISOString()
+      await writeJsonFile(path.join(NoteStore.dir, `${note.id}.json`), note)
+    },
+    catch: (e) => new Error(`Failed to save note: ${e}`),
+  }),
+
+  delete: (id: string) => Effect.tryPromise({
+    try: async () => {
+      await fs.unlink(path.join(NoteStore.dir, `${id}.json`))
+    },
+    catch: (e) => new Error(`Failed to delete note ${id}: ${e}`),
+  }),
+
+  search: (query: string) => Effect.gen(function* () {
+    const notes = yield* NoteStore.list
+    const q = query.toLowerCase()
+    return notes.filter(
+      (n: NoteEntry) =>
+        n.title.toLowerCase().includes(q) ||
+        n.content.toLowerCase().includes(q) ||
+        n.tags.some((t: string) => t.toLowerCase().includes(q))
+    )
+  }),
 }

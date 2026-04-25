@@ -4,6 +4,8 @@ import { QuestionTool } from "./question"
 import { CharacterTool } from "./character"
 import { LoreTool } from "./lore"
 import { SceneTool } from "./scene"
+import { NoteTool } from "./note"
+import { RollTool } from "./roll"
 import { TaskTool } from "./task"
 import { ReadTool } from "./read"
 import { InvalidTool } from "./invalid"
@@ -91,6 +93,8 @@ export const layer: Layer.Layer<
     const character = yield* CharacterTool
     const lore = yield* LoreTool
     const scene = yield* SceneTool
+    const notetool = yield* NoteTool
+    const rolltool = yield* RollTool
     const agent = yield* Agent.Service
 
     const state = yield* InstanceState.make<State>(
@@ -162,6 +166,8 @@ export const layer: Layer.Layer<
           character: Tool.init(character),
           lore: Tool.init(lore),
           scene: Tool.init(scene),
+          note: Tool.init(notetool),
+          roll: Tool.init(rolltool),
           question: Tool.init(question),
           plan: Tool.init(plan),
         })
@@ -176,6 +182,8 @@ export const layer: Layer.Layer<
             tool.character,
             tool.lore,
             tool.scene,
+            tool.note,
+            tool.roll,
             ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [tool.plan] : []),
           ],
           task: tool.task,
