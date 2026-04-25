@@ -11,6 +11,7 @@ import { SkillTool } from "./skill"
 import * as Tool from "./tool"
 import { Config } from "../config"
 import { LSP } from "../lsp"
+import { Provider } from "../provider"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@opencode-ai/plugin"
 import z from "zod"
 import { Plugin } from "../plugin"
@@ -64,6 +65,7 @@ export const layer: Layer.Layer<
   | Agent.Service
   | Skill.Service
   | Session.Service
+  | Provider.Service
   | Instruction.Service
   | AppFileSystem.Service
   | Bus.Service
@@ -277,6 +279,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Session.defaultLayer),
     Layer.provide(Instruction.defaultLayer),
     Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(Provider.defaultLayer),
     Layer.provide(Bus.layer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(Ripgrep.defaultLayer),
