@@ -17,6 +17,8 @@ const Parameters = z.object({
 export const LoreTool = Tool.define(
   "lore",
   Effect.gen(function* () {
+    const meta = (id?: string) => ({ id })
+
     return {
       description: [
         "Manage the world's lore - locations, factions, items, history, magic systems, culture.",
@@ -29,6 +31,7 @@ export const LoreTool = Tool.define(
       execute: (args: z.infer<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const action = args.action
+          const id = args.id
 
           if (action === "create") {
             const entry: LoreEntry = {
@@ -43,7 +46,7 @@ export const LoreTool = Tool.define(
             yield* LoreStore.save(entry)
             return {
               title: `Created lore: ${entry.title}`,
-              metadata: { lore_id: entry.id },
+              metadata: meta(entry.id),
               output: `Lore entry **${entry.title}** created! ID: ${entry.id}\nCategory: ${entry.category}`,
             }
           }
@@ -51,7 +54,7 @@ export const LoreTool = Tool.define(
           if (action === "list") {
             let entries = yield* LoreStore.list
             if (args.category) entries = entries.filter((e: LoreEntry) => e.category === args.category)
-            if (entries.length === 0) return { title: "No lore entries", metadata: {}, output: "No lore entries yet." }
+            if (entries.length === 0) return { title: "No lore entries", metadata: meta(), output: "No lore entries yet." }
             const byCat: Record<string, LoreEntry[]> = {}
             for (const e of entries) {
               (byCat[e.category] ??= []).push(e)
@@ -61,44 +64,44 @@ export const LoreTool = Tool.define(
               lines.push(`**${cat}:**`)
               for (const item of items) lines.push(`  - ${item.title} [${item.id}]`)
             }
-            return { title: `${entries.length} entries`, metadata: {}, output: lines.join("\n") }
+            return { title: `${entries.length} entries`, metadata: meta(), output: lines.join("\n") }
           }
 
           if (action === "get") {
-            const entry = yield* LoreStore.get(args.id!)
+            const entry = yield* LoreStore.get(id!)
             return {
               title: `Lore: ${entry.title}`,
-              metadata: { lore: entry },
+              metadata: meta(entry.id),
               output: `**${entry.title}** [${entry.id}]\nCategory: ${entry.category}\n\n${entry.content}`,
             }
           }
 
           if (action === "search") {
             const results = yield* LoreStore.search(args.query ?? "")
-            if (results.length === 0) return { title: "No results", metadata: {}, output: `No matches for '${args.query}'.` }
+            if (results.length === 0) return { title: "No results", metadata: meta(), output: `No matches for '${args.query}'.` }
             const list = results
               .map((e: LoreEntry) => `- **${e.title}** [${e.category}] - ${e.content.slice(0, 80)}...`)
               .join("\n")
-            return { title: `${results.length} result(s)`, metadata: {}, output: list }
+            return { title: `${results.length} result(s)`, metadata: meta(), output: list }
           }
 
           if (action === "update") {
-            const entry = yield* LoreStore.get(args.id!)
+            const entry = yield* LoreStore.get(id!)
             if (args.title) entry.title = args.title
             if (args.category) entry.category = args.category
             if (args.content) entry.content = args.content
             if (args.tags) entry.tags = args.tags
             yield* LoreStore.save(entry)
-            return { title: `Updated: ${entry.title}`, metadata: {}, output: `Lore **${entry.title}** updated!` }
+            return { title: `Updated: ${entry.title}`, metadata: meta(entry.id), output: `Lore **${entry.title}** updated!` }
           }
 
           if (action === "delete") {
-            const entry = yield* LoreStore.get(args.id!)
-            yield* LoreStore.delete(args.id!)
-            return { title: `Deleted: ${entry.title}`, metadata: {}, output: `Lore **${entry.title}** deleted.` }
+            const entry = yield* LoreStore.get(id!)
+            yield* LoreStore.delete(id!)
+            return { title: `Deleted: ${entry.title}`, metadata: meta(entry.id), output: `Lore **${entry.title}** deleted.` }
           }
 
-          return { title: "Unknown action", metadata: {}, output: `Unknown: ${action}` }
+          return { title: "Unknown action", metadata: meta(), output: `Unknown: ${action}` }
         }).pipe(Effect.orDie),
     }
   }),

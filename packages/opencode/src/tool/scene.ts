@@ -20,10 +20,13 @@ const Parameters = z.object({
 export const SceneTool = Tool.define(
   "scene",
   Effect.gen(function* () {
+    const meta = (id?: string) => ({ id })
+
     return {
       description: [
         "Manage roleplay scenes - the active storytelling sessions.",
         "Create scenes with a setting and participants, then narrate, speak as characters, or input player actions.",
+        "Use `active` to check the current active scene. Use `set_active` to switch scenes.",
         "Scenes track full conversation history for context.",
       ].join("\n"),
 
@@ -32,6 +35,7 @@ export const SceneTool = Tool.define(
       execute: (args: z.infer<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const action = args.action
+          const id = args.id
 
           if (action === "create") {
             const participants = args.participants ?? []
@@ -51,22 +55,22 @@ export const SceneTool = Tool.define(
             yield* ActiveStateStore.setActiveScene(scene.id)
             return {
               title: `Scene: ${scene.title}`,
-              metadata: { scene_id: scene.id },
+              metadata: meta(scene.id),
               output: `**${scene.title}** started! (now active)\nSetting: ${scene.setting}\nScene ID: ${scene.id}`,
             }
           }
 
           if (action === "list") {
             const scenes = yield* SceneStore.list
-            if (scenes.length === 0) return { title: "No scenes", metadata: {}, output: "No active scenes." }
+            if (scenes.length === 0) return { title: "No scenes", metadata: meta(), output: "No active scenes." }
             const list = scenes
               .map((s: Scene) => `- **${s.title}** [${s.id}] - ${s.history.length} msgs`)
               .join("\n")
-            return { title: `${scenes.length} scene(s)`, metadata: {}, output: list }
+            return { title: `${scenes.length} scene(s)`, metadata: meta(), output: list }
           }
 
           if (action === "get") {
-            const scene = yield* SceneStore.get(args.id!)
+            const scene = yield* SceneStore.get(id!)
             const historyStr = scene.history
               .slice(-10)
               .map((m: SceneMessage) => {
@@ -77,23 +81,23 @@ export const SceneTool = Tool.define(
               .join("\n\n")
             return {
               title: `Scene: ${scene.title}`,
-              metadata: { scene },
+              metadata: meta(scene.id),
               output: `**${scene.title}** [${scene.id}]\nSetting: ${scene.setting}\nMessages: ${scene.history.length}\n\n${historyStr}`,
             }
           }
 
           if (action === "narrate") {
-            yield* SceneStore.addMessage(args.id!, {
+            yield* SceneStore.addMessage(id!, {
               role: "narrator" as const,
               content: args.content ?? "",
               timestamp: new Date().toISOString(),
             })
-            return { title: "Narration added", metadata: {}, output: `*[Narrator]: ${args.content}*` }
+            return { title: "Narration added", metadata: meta(id), output: `*[Narrator]: ${args.content}*` }
           }
 
           if (action === "speak") {
             const char = yield* CharacterStore.get(args.character_id!)
-            yield* SceneStore.addMessage(args.id!, {
+            yield* SceneStore.addMessage(id!, {
               role: "character" as const,
               character_id: args.character_id!,
               content: args.content ?? "",
@@ -101,29 +105,29 @@ export const SceneTool = Tool.define(
             })
             return {
               title: `${char.name} speaks`,
-              metadata: {},
+              metadata: meta(id),
               output: `**${char.name}:** ${args.content}`,
             }
           }
 
           if (action === "player") {
-            yield* SceneStore.addMessage(args.id!, {
+            yield* SceneStore.addMessage(id!, {
               role: "player" as const,
               content: args.content ?? "",
               timestamp: new Date().toISOString(),
             })
-            return { title: "Player action", metadata: {}, output: `*[You]: ${args.content}*` }
+            return { title: "Player action", metadata: meta(id), output: `*[You]: ${args.content}*` }
           }
 
           if (action === "set_active") {
-            yield* ActiveStateStore.setActiveScene(args.id!)
-            return { title: "Active scene set", metadata: {}, output: `Active scene set to ID: ${args.id}` }
+            yield* ActiveStateStore.setActiveScene(id!)
+            return { title: "Active scene set", metadata: meta(id), output: `Active scene set to ID: ${id}` }
           }
 
           if (action === "active") {
             const state = yield* ActiveStateStore.get
             if (!state.active_scene_id) {
-              return { title: "No active scene", metadata: {}, output: "No active scene. Create one with scene/create." }
+              return { title: "No active scene", metadata: meta(), output: "No active scene. Create one with scene/create." }
             }
             const scene = yield* SceneStore.get(state.active_scene_id)
             let playerInfo = ""
@@ -141,7 +145,7 @@ export const SceneTool = Tool.define(
               .join("\n")
             return {
               title: `Active: ${scene.title}`,
-              metadata: { active_scene: scene, active_state: state },
+              metadata: meta(scene.id),
               output: [
                 `**Active Scene:** ${scene.title} [${scene.id}]`,
                 `Setting: ${scene.setting}`,
@@ -156,12 +160,12 @@ export const SceneTool = Tool.define(
           }
 
           if (action === "delete") {
-            const scene = yield* SceneStore.get(args.id!)
-            yield* SceneStore.delete(args.id!)
-            return { title: `Deleted: ${scene.title}`, metadata: {}, output: "Scene deleted." }
+            const scene = yield* SceneStore.get(id!)
+            yield* SceneStore.delete(id!)
+            return { title: `Deleted: ${scene.title}`, metadata: meta(id), output: "Scene deleted." }
           }
 
-          return { title: "Unknown", metadata: {}, output: `Unknown: ${action}` }
+          return { title: "Unknown", metadata: meta(), output: `Unknown: ${action}` }
         }).pipe(Effect.orDie),
     }
   }),

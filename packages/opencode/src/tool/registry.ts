@@ -10,6 +10,7 @@ import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
 import * as Tool from "./tool"
 import { Config } from "../config"
+import { LSP } from "../lsp"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@opencode-ai/plugin"
 import z from "zod"
 import { Plugin } from "../plugin"
@@ -68,6 +69,7 @@ export const layer: Layer.Layer<
   | Bus.Service
   | HttpClient.HttpClient
   | Ripgrep.Service
+  | LSP.Service
   | Truncate.Service
 > = Layer.effect(
   Service,
@@ -278,6 +280,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Bus.layer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(Ripgrep.defaultLayer),
+    Layer.provide(LSP.defaultLayer),
     Layer.provide(Truncate.defaultLayer),
   ),
 )

@@ -18,12 +18,14 @@ const Parameters = z.object({
 export const CharacterTool = Tool.define(
   "character",
   Effect.gen(function* () {
+    const meta = (id?: string) => ({ id })
+
     return {
       description: [
         "Manage characters in the roleplay world.",
         "Create, list, view, update, or delete characters.",
         "Each character has a name, persona, personality, speaking style, and background.",
-        "Characters can be used as NPCs (controlled by the AI) or as the player character.",
+        "Use `set_player` to mark a character as the player's avatar.",
       ].join("\n"),
 
       parameters: Parameters,
@@ -31,6 +33,7 @@ export const CharacterTool = Tool.define(
       execute: (args: z.infer<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const action = args.action
+          const id = args.id
 
           if (action === "create") {
             const char: Character = {
@@ -47,7 +50,7 @@ export const CharacterTool = Tool.define(
             yield* CharacterStore.save(char)
             return {
               title: `Created: ${char.name}`,
-              metadata: { character_id: char.id },
+              metadata: meta(char.id),
               output: [
                 `**${char.name}** created! ID: ${char.id}`,
                 `Persona: ${char.persona}`,
@@ -60,17 +63,17 @@ export const CharacterTool = Tool.define(
           if (action === "list") {
             const characters = yield* CharacterStore.list
             if (characters.length === 0) {
-              return { title: "No characters", metadata: {}, output: "No characters yet. Create one!" }
+              return { title: "No characters", metadata: meta(), output: "No characters yet. Create one!" }
             }
             const list = characters.map((c: Character) => `- **${c.name}** [${c.id}]: ${c.persona}`).join("\n")
-            return { title: `${characters.length} character(s)`, metadata: {}, output: list }
+            return { title: `${characters.length} character(s)`, metadata: meta(), output: list }
           }
 
           if (action === "get") {
-            const char = yield* CharacterStore.get(args.id!)
+            const char = yield* CharacterStore.get(id!)
             return {
               title: `Character: ${char.name}`,
-              metadata: { character: char },
+              metadata: meta(char.id),
               output: [
                 `**${char.name}** [${char.id}]`,
                 "",
@@ -83,7 +86,7 @@ export const CharacterTool = Tool.define(
           }
 
           if (action === "update") {
-            const char = yield* CharacterStore.get(args.id!)
+            const char = yield* CharacterStore.get(id!)
             if (args.name) char.name = args.name
             if (args.persona) char.persona = args.persona
             if (args.personality) char.personality = args.personality
@@ -91,26 +94,26 @@ export const CharacterTool = Tool.define(
             if (args.background) char.background = args.background
             if (args.voice_id !== undefined) char.voice_id = args.voice_id
             yield* CharacterStore.save(char)
-            return { title: `Updated: ${char.name}`, metadata: {}, output: `Character **${char.name}** updated!` }
+            return { title: `Updated: ${char.name}`, metadata: meta(char.id), output: `Character **${char.name}** updated!` }
           }
 
           if (action === "set_player") {
-            const char = yield* CharacterStore.get(args.id!)
-            yield* ActiveStateStore.setPlayerCharacter(args.id!)
+            const char = yield* CharacterStore.get(id!)
+            yield* ActiveStateStore.setPlayerCharacter(id!)
             return {
               title: `Player: ${char.name}`,
-              metadata: {},
+              metadata: meta(char.id),
               output: `**${char.name}** is now the player character.`,
             }
           }
 
           if (action === "delete") {
-            const char = yield* CharacterStore.get(args.id!)
-            yield* CharacterStore.delete(args.id!)
-            return { title: `Deleted: ${char.name}`, metadata: {}, output: `Character **${char.name}** deleted.` }
+            const char = yield* CharacterStore.get(id!)
+            yield* CharacterStore.delete(id!)
+            return { title: `Deleted: ${char.name}`, metadata: meta(char.id), output: `Character **${char.name}** deleted.` }
           }
 
-          return { title: "Unknown action", metadata: {}, output: `Unknown action: ${action}` }
+          return { title: "Unknown action", metadata: meta(), output: `Unknown action: ${action}` }
         }).pipe(Effect.orDie),
     }
   }),
