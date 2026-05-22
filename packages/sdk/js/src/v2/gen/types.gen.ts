@@ -938,10 +938,7 @@ export type Session = {
   directory: string
   parentID?: string
   summary?: {
-    additions: number
-    deletions: number
-    files: number
-    diffs?: Array<SnapshotFileDiff>
+    narrative: string
   }
   share?: {
     url: string
@@ -1868,10 +1865,7 @@ export type GlobalSession = {
   directory: string
   parentID?: string
   summary?: {
-    additions: number
-    deletions: number
-    files: number
-    diffs?: Array<SnapshotFileDiff>
+    narrative: string
   }
   share?: {
     url: string

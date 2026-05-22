@@ -368,7 +368,7 @@ describe("revert + compact workflow", () => {
           yield* session.setRevert({
             sessionID: sid,
             revert: { messageID: u1.id, partID: p2.id },
-            summary: { additions: 0, deletions: 0, files: 0 },
+            summary: { narrative: "test revert" },
           })
 
           const state = yield* session.get(sid)
@@ -410,7 +410,7 @@ describe("revert + compact workflow", () => {
           yield* session.setRevert({
             sessionID: sid,
             revert: { messageID: u2.id },
-            summary: { additions: 0, deletions: 0, files: 0 },
+            summary: { narrative: "test revert" },
           })
 
           const state = yield* session.get(sid)

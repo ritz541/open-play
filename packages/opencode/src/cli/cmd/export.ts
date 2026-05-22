@@ -170,8 +170,7 @@ function sanitize(data: { info: Session.Info; messages: MessageV2.WithParts[] })
       summary: !data.info.summary
         ? data.info.summary
         : {
-            ...data.info.summary,
-            diffs: diff("session-diff", data.info.summary.diffs),
+            narrative: redact("session-narrative", data.info.id, data.info.summary.narrative),
           },
       revert: !data.info.revert
         ? data.info.revert

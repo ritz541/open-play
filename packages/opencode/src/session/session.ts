@@ -47,15 +47,9 @@ export function isDefaultTitle(title: string) {
 type SessionRow = typeof SessionTable.$inferSelect
 
 export function fromRow(row: SessionRow): Info {
-  const summary =
-    row.summary_additions !== null || row.summary_deletions !== null || row.summary_files !== null
-      ? {
-          additions: row.summary_additions ?? 0,
-          deletions: row.summary_deletions ?? 0,
-          files: row.summary_files ?? 0,
-          diffs: row.summary_diffs ?? undefined,
-        }
-      : undefined
+  const summary = row.summary_diffs !== null
+    ? { narrative: typeof row.summary_diffs === "string" ? row.summary_diffs : JSON.stringify(row.summary_diffs) }
+    : undefined
   const share = row.share_url ? { url: row.share_url } : undefined
   const revert = row.revert ?? undefined
   return {
@@ -91,10 +85,10 @@ export function toRow(info: Info) {
     title: info.title,
     version: info.version,
     share_url: info.share?.url,
-    summary_additions: info.summary?.additions,
-    summary_deletions: info.summary?.deletions,
-    summary_files: info.summary?.files,
-    summary_diffs: info.summary?.diffs,
+    summary_additions: null,
+    summary_deletions: null,
+    summary_files: null,
+    summary_diffs: (info.summary?.narrative ?? null) as unknown as Snapshot.FileDiff[] | null,
     revert: info.revert ?? null,
     permission: info.permission,
     time_created: info.time.created,
@@ -124,10 +118,7 @@ export const Info = z
     parentID: SessionID.zod.optional(),
     summary: z
       .object({
-        additions: z.number(),
-        deletions: z.number(),
-        files: z.number(),
-        diffs: Snapshot.FileDiff.array().optional(),
+        narrative: z.string(),
       })
       .optional(),
     share: z

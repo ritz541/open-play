@@ -276,26 +276,25 @@ export const layer: Layer.Layer<
       )
       const defaultPrompt = `When constructing the summary, try to stick to this template:
 ---
-## Goal
+## Current Scene & Setting
 
-[What goal(s) is the user trying to accomplish?]
+[Where is the story currently taking place? Describe the environment, atmosphere, and time of day.]
 
-## Instructions
+## Characters Involved
 
-- [What important instructions did the user give you that are relevant]
-- [If there is a plan or spec, include information about it so next agent can continue using it]
+[Who is present? Player character(s) and notable NPCs. Include their current state, mood, appearance, and any important context.]
 
-## Discoveries
+## Story Developments
 
-[What notable things were learned during this conversation that would be useful for the next agent to know when continuing the work]
+[What has happened since the last summary? Key events, dialogue exchanges, player decisions, discoveries found.]
 
-## Accomplished
+## Active Threads
 
-[What work has been completed, what work is still in progress, and what work is left?]
+[Unresolved plot hooks, ongoing quests, mysteries, or goals the player is pursuing.]
 
-## Relevant files / directories
+## Important Lore
 
-[Construct a structured list of relevant files that have been read, edited, or created that pertain to the task at hand. If all the files in a directory are relevant, include the path to the directory.]
+[World-building information revealed that remains relevant — locations, factions, items, history, magic, culture, etc.]
 ---`
 
       const prompt = compacting.prompt ?? [defaultPrompt, ...compacting.context].join("\n\n")

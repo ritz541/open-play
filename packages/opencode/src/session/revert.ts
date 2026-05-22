@@ -81,11 +81,7 @@ export const layer = Layer.effect(
       yield* sessions.setRevert({
         sessionID: input.sessionID,
         revert: rev,
-        summary: {
-          additions: diffs.reduce((sum, x) => sum + x.additions, 0),
-          deletions: diffs.reduce((sum, x) => sum + x.deletions, 0),
-          files: diffs.length,
-        },
+        summary: { narrative: `Reverted ${diffs.length} change(s)` },
       })
       return yield* sessions.get(input.sessionID)
     })

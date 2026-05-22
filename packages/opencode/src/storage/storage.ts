@@ -193,7 +193,8 @@ const MIGRATIONS: Migration[] = [
       const raw = yield* fs.readJson(item)
       const session = decodeSummary(raw, { onExcessProperty: "preserve" })
       if (Option.isNone(session)) continue
-      const diffs = session.value.summary.diffs
+      const summary = session.value.summary
+      const diffs = "diffs" in summary ? summary.diffs : []
       yield* fs.writeWithDirs(
         path.join(dir, "session_diff", session.value.id + ".json"),
         JSON.stringify(diffs, null, 2),
@@ -204,8 +205,7 @@ const MIGRATIONS: Migration[] = [
           {
             ...(raw as Record<string, unknown>),
             summary: {
-              additions: diffs.reduce((sum, x) => sum + x.additions, 0),
-              deletions: diffs.reduce((sum, x) => sum + x.deletions, 0),
+              narrative: "narrative" in summary ? summary.narrative : "",
             },
           },
           null,
